@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wizard's Vault Tracker</title>
+<style>
+:root {
+  --bg: #f5f6f8; --card: #ffffff; --ink: #1b1f27; --muted: #667085; --line: #e1e4ea;
+  --accent: #3b5bdb; --accent-ink: #ffffff;
+  --ok: #cdeedb; --ready: #fff0b3; --dim: #e9ebf0; --warn: #f9d3bd; --bad: #fbd5d5;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14171c; --card: #1c2027; --ink: #e8eaee; --muted: #9aa3b2; --line: #2c323c;
+    --accent: #8da2ff; --accent-ink: #11151f;
+    --ok: #1f4d36; --ready: #5a4a12; --dim: #262b33; --warn: #6b3b1f; --bad: #5c2323;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.wrap { padding: 16px 24px; }
+header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 6px; }
+h1 { font-size: 20px; margin: 0 8px 0 0; flex: 0 0 auto; }
+.spacer { flex: 1 1 auto; }
+.tabs { display: flex; gap: 4px; }
+.tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.filters { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; margin: 0 0 10px; font-size: 14px; }
+.filters label { cursor: pointer; }
+td.muted { color: var(--muted); }
+th.person { text-align: center; border-left: 1px solid var(--line); }
+#rewards td:nth-child(2) { text-align: center; }
+button, .btn { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--ink);
+  border-radius: 8px; padding: 7px 12px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+button:disabled { opacity: .55; cursor: default; }
+button.icon { padding: 3px 8px; min-width: 30px; }
+.meta { color: var(--muted); font-size: 13px; margin: 2px 0 12px; }
+.banner { border-radius: 8px; padding: 10px 12px; margin: 0 0 12px; border: 1px solid var(--line); background: var(--card); }
+.banner.error { background: var(--bad); }
+.banner.info { background: var(--dim); }
+.tablewrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: center; vertical-align: middle; }
+th { font-size: 12px; font-weight: 600; background: var(--dim); min-width: 92px; vertical-align: bottom; }
+th:first-child, td:first-child { text-align: left; position: sticky; left: 0; background: var(--card); z-index: 1; min-width: 140px; }
+th:first-child { background: var(--dim); }
+tr.req td { background: var(--dim); font-weight: 600; }
+tr.req td:first-child { background: var(--dim); }
+tr.group td { background: var(--dim); text-align: left; font-weight: 600; padding: 9px 10px; }
+tr.group td:first-child { background: var(--dim); }
+.sub.err { color: #b42318; }
+@media (prefers-color-scheme: dark) { .sub.err { color: #ffb4ad; } }
+.sub { display: block; color: var(--muted); font-size: 12px; }
+td.ok { background: var(--ok); } td.ready { background: var(--ready); } td.dim { background: var(--dim); }
+td.warn { background: var(--warn); } td.bad { background: var(--bad); }
+td.status { text-align: left; min-width: 150px; max-width: 260px; }
+.legend { color: var(--muted); font-size: 12.5px; margin: 10px 2px 0; display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.chip { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 4px; border: 1px solid var(--line); }
+section.setup { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 14px; max-width: 960px; }
+section.setup h2 { font-size: 16px; margin: 0 0 4px; }
+.person { border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin: 10px 0; }
+.row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
+input[type=text], input[type=password] { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--bg); color: var(--ink); min-width: 0; }
+input.name { flex: 1 1 140px; font-weight: 600; }
+input.label { flex: 1 1 130px; }
+input.key { flex: 3 1 260px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; }
+.alltoggle { display: inline-flex; align-items: center; gap: 2px; cursor: pointer; white-space: nowrap; }
+.acct { padding-left: 10px; border-left: 3px solid var(--line); margin-left: 4px; }
+.help { color: var(--muted); font-size: 13px; }
+.help a { color: var(--accent); }
+.hidden { display: none !important; }
+@media (max-width: 600px) { .wrap { padding: 10px; } th { min-width: 80px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Wizard's Vault Tracker</h1>
+    <div class="tabs" role="tablist">
+      <button id="tab-tasks" type="button" role="tab" data-tab="tasks">Tasks</button>
+      <button id="tab-rewards" type="button" role="tab" data-tab="rewards">Rewards</button>
+    </div>
+    <span class="spacer"></span>
+    <button id="btn-setup" type="button">Setup</button>
+    <button id="btn-refresh" class="primary" type="button">Refresh</button>
+  </header>
+  <div class="meta" id="meta"></div>
+  <div id="banners"></div>
+
+  <section class="setup hidden" id="setup">
+    <h2>Setup</h2>
+    <p class="help">
+      Create a key at <a href="https://account.arena.net/applications" target="_blank" rel="noopener">account.arena.net &rarr; Applications</a>
+      with <b>account</b>, <b>progression</b> and <b>wallet</b> ticked, then paste it below. Keys stay in this browser on this
+      device and are only ever sent to the Guild Wars 2 API. Use the arrows to reorder people and accounts.
+    </p>
+    <div id="people"></div>
+    <div class="row">
+      <button type="button" id="btn-add-person">+ Add person</button>
+      <label class="help"><input type="checkbox" id="chk-show"> show keys</label>
+    </div>
+    <div class="row">
+      <button type="button" id="btn-export">Export setup</button>
+      <button type="button" id="btn-import">Import setup</button>
+      <input type="file" id="file-import" accept="application/json,.json" class="hidden">
+      <span class="help">Export/import copies your setup (including keys) to another device. Keep the file private.</span>
+    </div>
+  </section>
+
+  <div class="tablewrap hidden" id="results-wrap"><table id="results"></table></div>
+  <div class="legend hidden" id="legend">
+    <span><i class="chip" style="background:var(--ok)"></i>done &amp; claimed &#10003;</span>
+    <span><i class="chip" style="background:var(--ready)"></i>done, reward waiting &#9733;</span>
+    <span><i class="chip" style="background:var(--dim)"></i>no login this week / error</span>
+    <span><i class="chip" style="background:var(--warn)"></i>at the 1,300 Astral Acclaim cap</span>
+  </div>
+
+  <div id="rewards-view" class="hidden">
+    <div class="filters" id="rewards-filters"></div>
+    <p class="help hidden" id="rewards-empty"></p>
+    <div class="tablewrap hidden" id="rewards-wrap"><table id="rewards"></table></div>
+    <div class="legend hidden" id="legend-rewards">
+      <span><i class="chip" style="background:var(--ok)"></i>all purchased &#10003;</span>
+      <span>&infin; no purchase limit</span>
+      <span><i class="chip" style="background:var(--dim)"></i>no data for this account</span>
+    </div>
+    <p class="help hidden" id="rewards-note">Note: Guild Wars 2's API has a reported bug where purchase counts for regular (non-legacy) items can show 0.
+      If a count looks wrong, trust the in-game vault.</p>
+  </div>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+/* ---------- constants ---------- */
+const API = "https://api.guildwars2.com/v2";
+const ASTRAL_ACCLAIM_ID = 63;      // currency id for Astral Acclaim
+const ACCLAIM_CAP = 1300;          // can't claim more acclaim at/above this balance
+const CFG_KEY = "gw2vault.config.v1";
+const RES_KEY = "gw2vault.results.v1";
+const PUB_KEY = "gw2vault.listings.v1";   // this season's vault items (public data)
+const ITEMS_KEY = "gw2vault.items.v1";    // item id -> name cache
+const TAB_KEY = "gw2vault.tab.v1";
+const FILTER_KEY = "gw2vault.typefilter.v1";
+const TYPE_ORDER = ["Featured", "Normal", "Legacy"];
+
+/* ---------- small helpers ---------- */
+const $ = (id) => document.getElementById(id);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const uid = () => Math.random().toString(36).slice(2, 9);
+const num = (n) => (n == null ? "" : Number(n).toLocaleString());
+
+function el(tag, attrs, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === "class") n.className = v;
+    else if (k === "text") n.textContent = v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else n.setAttribute(k, v === true ? "" : v);
+  }
+  for (const kid of kids.flat()) {
+    if (kid == null || kid === false) continue;
+    n.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  }
+  return n;
+}
+
+function fmtTime(d) {
+  if (!d) return "";
+  return new Date(d).toLocaleString([], { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+let storageOk = true;
+function load(key, fallback) {
+  try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : fallback; }
+  catch { return fallback; }
+}
+function save(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); }
+  catch { storageOk = false; }
+}
+
+/* ---------- weekly reset: Monday 07:30 UTC ---------- */
+function lastWeeklyReset(now = new Date()) {
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 7, 30, 0));
+  d.setUTCDate(d.getUTCDate() - ((now.getUTCDay() + 6) % 7)); // back to Monday
+  if (d > now) d.setUTCDate(d.getUTCDate() - 7);              // Monday before 07:30
+  return d;
+}
+
+/* ---------- API ---------- */
+class ApiError extends Error { constructor(msg, kind) { super(msg); this.kind = kind; } }
+
+// The key goes in the access_token query parameter (a documented option). That keeps these
+// plain GET requests, so the browser doesn't need a CORS preflight.
+async function apiGet(path, key, params = {}, retries = 2) {
+  const qs = new URLSearchParams(key ? { ...params, access_token: key } : params);
+  const url = `${API}/${path}?${qs}`;
+  for (let attempt = 0; ; attempt++) {
+    let res;
+    try {
+      res = await fetch(url);
+    } catch {
+      if (attempt < retries) { await sleep(800 * (attempt + 1)); continue; }
+      throw new ApiError("Couldn't reach the GW2 API (offline, or the browser blocked the request)", "network");
+    }
+    if (res.ok) return res.json();
+    if ([429, 500, 502, 503, 504].includes(res.status) && attempt < retries) {
+      await sleep(1500 * (attempt + 1)); continue;
+    }
+    let text = "";
+    try { text = (await res.json()).text || ""; } catch { /* ignore */ }
+    throw new ApiError(`${res.status}: ${text || res.statusText || "request failed"}`, "http");
+  }
+}
+
+async function fetchAccount(key) {
+  // Reward purchases are a bonus: if that call fails, tasks still load.
+  const listingsP = apiGet("account/wizardsvault/listings", key).catch((e) => ({ error: e.message || "failed" }));
+  const [account, weekly, wallet, listings] = await Promise.all([
+    apiGet("account", key, { v: "latest" }),
+    apiGet("account/wizardsvault/weekly", key),
+    apiGet("account/wallet", key),
+    listingsP,
+  ]);
+  const w = wallet.find((c) => c.id === ASTRAL_ACCLAIM_ID);
+  return { account, weekly, acclaim: w ? w.value : 0, listings };
+}
+
+// This season's vault items and their names. No API key needed, and it's the same for everyone.
+let pub = load(PUB_KEY, null);       // { at, listings: [{id,item_id,type,cost}] }
+let itemNames = load(ITEMS_KEY, {}); // item id -> name
+let pubError = false;
+
+async function loadPublic() {
+  try {
+    const all = await apiGet("wizardsvault/listings", null, { ids: "all" });
+    const listings = all.map((l) => ({ id: l.id, item_id: l.item_id, type: l.type, cost: l.cost }));
+    const missing = [...new Set(listings.map((l) => l.item_id))].filter((id) => !itemNames[id]);
+    for (let i = 0; i < missing.length; i += 150) {
+      try {
+        const items = await apiGet("items", null, { ids: missing.slice(i, i + 150).join(","), lang: "en" });
+        for (const it of items) itemNames[it.id] = it.name;
+      } catch { /* names are cosmetic; fall back to "Item #id" */ }
+    }
+    save(ITEMS_KEY, itemNames);
+    pub = { at: new Date().toISOString(), listings };
+    save(PUB_KEY, pub);
+    pubError = false;
+  } catch {
+    pubError = !pub;   // fine if we still have last time's list
+  }
+}
+
+/* ---------- one account -> one flat record (never throws) ---------- */
+async function buildRecord(personName, acct, reset) {
+  const rec = {
+    person: personName || "(unnamed)", label: acct.label || "", accountName: "",
+    status: "ok", statusText: "Logged in", lastSeen: null, balance: null,
+    metaCur: null, metaNeed: null, metaClaimed: null, ready: null,
+    objectives: [], fresh: false, errorKind: null,
+    purchases: null, purchasesError: null,
+  };
+  try {
+    const data = await fetchAccount(acct.key);
+    rec.accountName = data.account.name || "";
+    rec.balance = data.acclaim;
+
+    // Reward purchases belong to the season, not the week, so keep them even for accounts
+    // that haven't logged in since Monday.
+    if (Array.isArray(data.listings)) {
+      rec.purchases = {};
+      for (const l of data.listings) rec.purchases[l.id] = { item: l.item_id, purchased: l.purchased, limit: l.purchase_limit };
+    } else if (data.listings && data.listings.error) {
+      rec.purchasesError = data.listings.error;
+    }
+    const lm = data.account.last_modified ? new Date(data.account.last_modified) : null;
+    rec.lastSeen = lm ? lm.toISOString() : null;
+
+    if (!lm) { rec.status = "unknown"; rec.statusText = "Last login unknown"; rec.fresh = true; }
+    else if (lm < reset) { rec.status = "stale"; rec.statusText = "No login this week"; return rec; }
+    else rec.fresh = true;
+
+    const w = data.weekly;
+    rec.metaCur = w.meta_progress_current;
+    rec.metaNeed = w.meta_progress_complete;
+    rec.metaClaimed = w.meta_reward_claimed;
+    let ready = 0;
+    for (const o of w.objectives || []) {
+      rec.objectives.push({ id: o.id, title: o.title, cur: o.progress_current, need: o.progress_complete, claimed: o.claimed });
+      if (o.progress_current >= o.progress_complete && !o.claimed) ready += o.acclaim;
+    }
+    if (rec.metaCur >= rec.metaNeed && !rec.metaClaimed) ready += w.meta_reward_astral;
+    rec.ready = ready;
+  } catch (e) {
+    rec.status = "error";
+    rec.statusText = e.message || "Unexpected error";
+    rec.errorKind = e.kind || "other";
+    rec.fresh = false;
+  }
+  return rec;
+}
+
+/* ---------- state ---------- */
+let config = load(CFG_KEY, { people: [] });
+if (!config || !Array.isArray(config.people)) config = { people: [] };
+let results = load(RES_KEY, null);   // { at, reset, records }
+let busy = false;
+let tab = load(TAB_KEY, "tasks");
+if (tab !== "tasks" && tab !== "rewards") tab = "tasks";
+let typeFilter = load(FILTER_KEY, { Featured: true, Normal: true, Legacy: false });
+
+function persist() { save(CFG_KEY, config); }
+
+/* ---------- banners ---------- */
+function banner(kind, text) { $("banners").append(el("div", { class: `banner ${kind}`, text })); }
+function clearBanners() { $("banners").replaceChildren(); }
+
+/* ---------- setup editor ---------- */
+function move(arr, i, d) {
+  const j = i + d;
+  if (j < 0 || j >= arr.length) return;
+  [arr[i], arr[j]] = [arr[j], arr[i]];
+}
+
+function renderSetup() {
+  const box = $("people");
+  const showKeys = $("chk-show").checked;
+  box.replaceChildren();
+  config.people.forEach((p, pi) => {
+    const accts = el("div");
+    // "All" checkbox for this person: on = every account on, dash = some on, off = none.
+    const allBox = el("input", { type: "checkbox", title: "Turn all of this person's accounts on or off",
+      "aria-label": "Include all accounts for this person" });
+    const acctBoxes = [];
+    const syncAll = () => {
+      const on = p.accounts.filter((a) => a.enabled !== false).length;
+      allBox.checked = p.accounts.length > 0 && on === p.accounts.length;
+      allBox.indeterminate = on > 0 && on < p.accounts.length;
+      allBox.disabled = p.accounts.length === 0;
+    };
+    allBox.addEventListener("change", () => {
+      const v = allBox.checked;
+      p.accounts.forEach((a) => { a.enabled = v; });
+      acctBoxes.forEach((b) => { b.checked = v; });
+      persist(); syncAll();
+    });
+    p.accounts.forEach((a, ai) => {
+      const cb = el("input", { type: "checkbox", title: "Include in refresh", ...(a.enabled !== false ? { checked: true } : {}),
+        onchange: (e) => { a.enabled = e.target.checked; persist(); syncAll(); } });
+      acctBoxes.push(cb);
+      accts.append(el("div", { class: "row acct" },
+        cb,
+        el("input", { type: "text", class: "label", placeholder: "Label (optional)", value: a.label || "", "aria-label": "Account label",
+          oninput: (e) => { a.label = e.target.value; persist(); } }),
+        el("input", { type: showKeys ? "text" : "password", class: "key", placeholder: "API key", value: a.key || "",
+          autocomplete: "off", spellcheck: "false", "aria-label": "API key",
+          oninput: (e) => { a.key = e.target.value.trim(); persist(); } }),
+        el("button", { type: "button", class: "icon", title: "Move up", "aria-label": "Move account up",
+          onclick: () => { move(p.accounts, ai, -1); persist(); renderSetup(); } }, "↑"),
+        el("button", { type: "button", class: "icon", title: "Move down", "aria-label": "Move account down",
+          onclick: () => { move(p.accounts, ai, 1); persist(); renderSetup(); } }, "↓"),
+        el("button", { type: "button", class: "icon", title: "Remove account", "aria-label": "Remove account",
+          onclick: () => { if (confirm("Remove this account?")) { p.accounts.splice(ai, 1); persist(); renderSetup(); } } }, "✕"),
+      ));
+    });
+    syncAll();
+    box.append(el("div", { class: "person" },
+      el("div", { class: "row" },
+        el("label", { class: "help alltoggle" }, allBox, " All"),
+        el("input", { type: "text", class: "name", placeholder: "Person", value: p.name || "", "aria-label": "Person name",
+          oninput: (e) => { p.name = e.target.value; persist(); } }),
+        el("button", { type: "button", class: "icon", title: "Move person up", "aria-label": "Move person up",
+          onclick: () => { move(config.people, pi, -1); persist(); renderSetup(); } }, "↑"),
+        el("button", { type: "button", class: "icon", title: "Move person down", "aria-label": "Move person down",
+          onclick: () => { move(config.people, pi, 1); persist(); renderSetup(); } }, "↓"),
+        el("button", { type: "button", class: "icon", title: "Remove person", "aria-label": "Remove person",
+          onclick: () => { if (confirm(`Remove ${p.name || "this person"} and all their accounts?`)) { config.people.splice(pi, 1); persist(); renderSetup(); } } }, "✕"),
+      ),
+      accts,
+      el("div", { class: "row" },
+        el("button", { type: "button", onclick: () => { p.accounts.push({ id: uid(), label: "", key: "", enabled: true }); persist(); renderSetup(); } }, "+ Add account"),
+      ),
+    ));
+  });
+  if (!config.people.length) box.append(el("p", { class: "help", text: "No one yet. Add a person to get started." }));
+}
+
+/* ---------- results table ---------- */
+function groupRecords(records) {
+  const groups = [];
+  for (const r of records) {
+    let g = groups.find((x) => x.name === r.person);
+    if (!g) { g = { name: r.person, records: [] }; groups.push(g); }
+    g.records.push(r);
+  }
+  return groups;
+}
+
+function renderResults() {
+  const wrap = $("results-wrap"), table = $("results"), legend = $("legend");
+  const show = tab === "tasks" && results && results.records.length;
+  wrap.classList.toggle("hidden", !show); legend.classList.toggle("hidden", !show);
+  if (!show) return;
+
+  const records = results.records;
+  // Task columns come only from accounts that logged in this week, so last week's
+  // leftover tasks can never add columns.
+  const tasks = new Map();
+  for (const r of records) if (r.fresh) for (const o of r.objectives) if (!tasks.has(o.id)) tasks.set(o.id, { title: o.title, need: o.need });
+  const metaNeed = (records.find((r) => r.fresh && r.metaNeed != null) || {}).metaNeed;
+  const fixedCols = 5;
+  const totalCols = fixedCols + tasks.size;
+
+  const head = el("tr", {},
+    ["Account", "Astral Acclaim", "Ready to claim", "Weekly meta", "Meta claimed"].map((h) => el("th", { text: h })),
+    [...tasks.values()].map((t) => el("th", { text: t.title, title: t.title })));
+  const req = el("tr", { class: "req" },
+    el("td", { text: "Required to complete" }), el("td"), el("td"),
+    el("td", { text: metaNeed != null ? String(metaNeed) : "" }), el("td"),
+    [...tasks.values()].map((t) => el("td", { text: String(t.need) })));
+
+  const body = [];
+  for (const g of groupRecords(records)) {
+    body.push(el("tr", { class: "group" }, el("td", { colspan: totalCols }, g.name)));
+    for (const r of g.records) {
+      const name = r.label || r.accountName || "(account)";
+      const metaCls = r.metaClaimed == null ? "" : r.metaClaimed ? "ok" : (r.metaCur >= r.metaNeed ? "ready" : "");
+      body.push(el("tr", {},
+        el("td", { class: r.status === "error" ? "bad" : "" }, name,
+          r.label && r.accountName ? el("span", { class: "sub", text: r.accountName }) : null,
+          r.status === "error" ? el("span", { class: "sub err", text: r.statusText }) : null),
+        el("td", { class: r.balance != null && r.balance >= ACCLAIM_CAP ? "warn" : "",
+          title: r.balance != null && r.balance >= ACCLAIM_CAP ? "At the 1,300 cap: spend some before claiming more" : null,
+          text: num(r.balance) }),
+        el("td", { class: r.fresh ? "" : "dim", text: r.ready == null ? "" : num(r.ready) }),
+        el("td", { class: r.fresh ? "" : "dim", text: r.metaCur == null ? "" : `${r.metaCur}/${r.metaNeed}` }),
+        el("td", { class: r.fresh ? metaCls : "dim", text: r.metaClaimed == null ? "" : r.metaClaimed ? "✓ Yes" : (metaCls === "ready" ? "★ No" : "No") }),
+        [...tasks.keys()].map((id) => {
+          const o = r.objectives.find((x) => x.id === id);
+          if (!o) return el("td", { class: r.fresh ? "" : "dim" });
+          const done = o.cur >= o.need;
+          return el("td", { class: o.claimed ? "ok" : done ? "ready" : "", text: `${o.cur}${o.claimed ? " ✓" : done ? " ★" : ""}` });
+        }),
+      ));
+    }
+  }
+  table.replaceChildren(el("thead", {}, head, req), el("tbody", {}, body));
+
+  if (!tasks.size) banner("info", "No account has logged in since this week's reset yet, so this week's tasks aren't known. Task columns appear once one account logs in.");
+}
+
+/* ---------- rewards tab ---------- */
+function renderFilters() {
+  const box = $("rewards-filters");
+  box.replaceChildren(el("span", { class: "help", text: "Show:" }),
+    ...TYPE_ORDER.map((t) => el("label", {},
+      el("input", { type: "checkbox", ...(typeFilter[t] !== false ? { checked: true } : {}),
+        onchange: (e) => { typeFilter[t] = e.target.checked; save(FILTER_KEY, typeFilter); renderRewards(); } }),
+      ` ${t}`)));
+}
+
+function rewardCell(rec, l) {
+  const p = rec.purchases && rec.purchases[l.id];
+  // No data, or the account's list is for a different season's item: don't guess.
+  if (!p || p.item !== l.item_id) return el("td", { class: "dim" });
+  if (p.limit == null) return el("td", { class: "muted", text: "∞", title: "No purchase limit" });
+  const n = p.purchased || 0;
+  const maxed = n >= p.limit;
+  return el("td", { class: maxed ? "ok" : "", text: `${n}/${p.limit}${maxed ? " ✓" : ""}` });
+}
+
+function renderRewards() {
+  const view = $("rewards-view");
+  view.classList.toggle("hidden", tab !== "rewards");
+  if (tab !== "rewards") return;
+  renderFilters();
+
+  const wrap = $("rewards-wrap"), table = $("rewards"), empty = $("rewards-empty");
+  const legend = $("legend-rewards"), note = $("rewards-note");
+  const records = results ? results.records : [];
+  let msg = "";
+  if (!records.length) msg = "Hit Refresh to load rewards.";
+  else if (!records.some((r) => r.purchases)) msg = "Hit Refresh to load rewards for your accounts.";
+  else if (!pub) msg = pubError ? "Couldn't load this season's vault item list. Try Refresh again." : "Hit Refresh to load rewards.";
+  empty.textContent = msg;
+  for (const [node, on] of [[empty, !!msg], [wrap, !msg], [legend, !msg], [note, !msg]]) node.classList.toggle("hidden", !on);
+  if (msg) return;
+
+  const failed = records.filter((r) => r.purchasesError && r.status !== "error").map((r) => r.label || r.accountName || "(account)");
+  if (failed.length) banner("info", `Couldn't load rewards for: ${failed.join(", ")}.`);
+
+  const rows = pub.listings
+    .filter((l) => typeFilter[l.type] !== false)
+    .sort((a, b) => (TYPE_ORDER.indexOf(a.type) + 1 || 99) - (TYPE_ORDER.indexOf(b.type) + 1 || 99) || a.id - b.id);
+  const groups = groupRecords(records);
+  const flat = groups.flatMap((g) => g.records);
+  const totalCols = 2 + flat.length;
+
+  const head1 = el("tr", {}, el("th"), el("th"),
+    groups.map((g) => el("th", { class: "person", colspan: g.records.length, text: g.name })));
+  const head2 = el("tr", {}, el("th", { text: "Item" }), el("th", { text: "Cost" }),
+    flat.map((r) => {
+      const bad = r.status === "error" || r.purchasesError;
+      return el("th", { title: r.accountName || "" }, r.label || r.accountName || "(account)",
+        bad ? el("span", { class: "sub err", text: "no data" }) : null);
+    }));
+
+  // How many limited items each account has bought, across the types currently shown.
+  const total = el("tr", { class: "req" }, el("td", { text: "Items purchased" }), el("td"),
+    flat.map((r) => {
+      if (!r.purchases) return el("td");
+      let n = 0;
+      for (const l of rows) {
+        const p = r.purchases[l.id];
+        if (p && p.item === l.item_id && p.limit != null) n += p.purchased || 0;
+      }
+      return el("td", { text: String(n) });
+    }));
+
+  const body = [];
+  if (!rows.length) body.push(el("tr", {}, el("td", { colspan: totalCols, text: "No item types selected." })));
+  let lastType = null;
+  for (const l of rows) {
+    if (l.type !== lastType) {
+      lastType = l.type;
+      const count = rows.filter((x) => x.type === l.type).length;
+      body.push(el("tr", { class: "group" }, el("td", { colspan: totalCols }, `${l.type} (${count})`)));
+    }
+    body.push(el("tr", {},
+      el("td", { text: itemNames[l.item_id] || `Item #${l.item_id}` }),
+      el("td", { text: num(l.cost) }),
+      flat.map((r) => rewardCell(r, l))));
+  }
+  table.replaceChildren(el("thead", {}, head1, head2, total), el("tbody", {}, body));
+}
+
+function syncTabs() {
+  for (const t of ["tasks", "rewards"]) $(`tab-${t}`).setAttribute("aria-selected", String(tab === t));
+}
+
+function setTab(name) {
+  tab = name; save(TAB_KEY, tab); renderAll();
+}
+
+/* ---------- meta line + refresh ---------- */
+function renderMeta() {
+  const reset = lastWeeklyReset();
+  let t = `This week's reset: ${fmtTime(reset)}.`;
+  if (results) t += ` Last refreshed: ${fmtTime(results.at)}.`;
+  $("meta").textContent = t;
+}
+
+function renderAll() {
+  clearBanners();
+  if (!storageOk) banner("info", "This browser wouldn't save your setup, so it will be lost when you close the page. Try a normal (non-private) window.");
+  renderMeta();
+  if (tab === "tasks" && results && new Date(results.at) < lastWeeklyReset()) banner("info", "These results are from before this week's reset. Hit Refresh to update.");
+  syncTabs();
+  renderResults();
+  renderRewards();
+}
+
+async function refresh() {
+  if (busy) return;
+  const jobs = [];
+  for (const p of config.people) for (const a of p.accounts) if (a.enabled !== false && a.key) jobs.push([p.name, a]);
+  if (!jobs.length) { $("setup").classList.remove("hidden"); clearBanners(); banner("info", "Add at least one account with an API key in Setup first."); return; }
+
+  busy = true;
+  const btn = $("btn-refresh");
+  btn.disabled = true; btn.textContent = "Refreshing…";
+  const reset = lastWeeklyReset();
+  try {
+    // One Refresh updates both tabs: accounts and the public vault item list load together.
+    const [records] = await Promise.all([
+      Promise.all(jobs.map(([name, a]) => buildRecord(name, a, reset))),
+      loadPublic(),
+    ]);
+    results = { at: new Date().toISOString(), reset: reset.toISOString(), records };
+    save(RES_KEY, results);
+    renderAll();
+    if (records.every((r) => r.status === "error" && r.errorKind === "network")) {
+      banner("error", "Every request failed before reaching the GW2 API. If you're online, your browser is probably blocking this page from calling the API. Let whoever built this know.");
+    }
+  } finally {
+    busy = false; btn.disabled = false; btn.textContent = "Refresh";
+  }
+}
+
+/* ---------- export / import ---------- */
+function exportSetup() {
+  const blob = new Blob([JSON.stringify(config, null, 2)], { type: "application/json" });
+  const a = el("a", { href: URL.createObjectURL(blob), download: "gw2-vault-setup.json" });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function importSetup(file) {
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const data = JSON.parse(rd.result);
+      if (!data || !Array.isArray(data.people)) throw new Error("bad shape");
+      const clean = { people: data.people.map((p) => ({
+        name: String(p.name || ""),
+        accounts: (Array.isArray(p.accounts) ? p.accounts : []).map((a) => ({
+          id: uid(), label: String(a.label || ""), key: String(a.key || "").trim(), enabled: a.enabled !== false })),
+      })) };
+      if (!confirm("Replace the current setup with the imported one?")) return;
+      config = clean; persist(); renderSetup();
+    } catch { alert("That file doesn't look like a setup export."); }
+  };
+  rd.readAsText(file);
+}
+
+/* ---------- wire up ---------- */
+$("btn-setup").addEventListener("click", () => $("setup").classList.toggle("hidden"));
+$("btn-refresh").addEventListener("click", refresh);
+$("tab-tasks").addEventListener("click", () => setTab("tasks"));
+$("tab-rewards").addEventListener("click", () => setTab("rewards"));
+$("btn-add-person").addEventListener("click", () => {
+  config.people.push({ name: "", accounts: [{ id: uid(), label: "", key: "", enabled: true }] });
+  persist(); renderSetup();
+});
+$("chk-show").addEventListener("change", renderSetup);
+$("btn-export").addEventListener("click", exportSetup);
+$("btn-import").addEventListener("click", () => $("file-import").click());
+$("file-import").addEventListener("change", (e) => { if (e.target.files[0]) importSetup(e.target.files[0]); e.target.value = ""; });
+
+if (!config.people.length) $("setup").classList.remove("hidden");
+renderSetup();
+renderAll();
+})();
+</script>
+</body>
+</html>
